@@ -643,6 +643,9 @@ class DeepSeekFloatingWidget:
 
         self._build_compact()
 
+        # 绑定窗口关闭事件
+        self.root.protocol("WM_DELETE_WINDOW", self._quit_app)
+
         # 启动时隐藏主窗口，直接显示登录页
         self.root.withdraw()
         self.root.after(100, self._start_auth)
@@ -853,7 +856,7 @@ class DeepSeekFloatingWidget:
         balance_frame.pack(fill="x", pady=(4, 6))
 
         today_tokens = self._get_today_tokens()
-        bal_text = f"余额: ¥{_format_num(self._balance)} | 本月消费: ¥{_format_num(self._monthly_usage)} | 今日消耗: {_format_num(today_tokens)} tokens"
+        bal_text = f"余额: ¥{_format_num(self._balance)} | 本月消费: ¥{_format_num(self._monthly_usage)} | 今日消耗: {_format_num(today_tokens)}"
         self.balance_label = tk.Label(balance_frame, text=bal_text,
                                       font=("Microsoft YaHei", 9, "bold"),
                                       fg=COLORS["accent"], bg=COLORS["accent_light"])
@@ -1088,7 +1091,7 @@ class DeepSeekFloatingWidget:
     def _update_display(self):
         if self.expanded:
             today_tokens = self._get_today_tokens()
-            bal_text = f"余额: ¥{_format_num(self._balance)} | 本月消费: ¥{_format_num(self._monthly_usage)} | 今日消耗: {_format_num(today_tokens)} tokens"
+            bal_text = f"余额: ¥{_format_num(self._balance)} | 本月消费: ¥{_format_num(self._monthly_usage)} | 今日消耗: {_format_num(today_tokens)}"
             if hasattr(self, "balance_label"):
                 self.balance_label.configure(text=bal_text)
             stats = self.monitor.get_stats()
@@ -1107,7 +1110,7 @@ class DeepSeekFloatingWidget:
         stats = self.monitor.get_stats()
         if stats["count"] > 0:
             today_tokens = self._get_today_tokens()
-            self.total_label.configure(text=f"本月总消耗: {_format_num(stats['total_all'])} tokens | 今日消耗: {_format_num(today_tokens)} tokens")
+            self.total_label.configure(text=f"本月总消耗: {_format_num(stats['total_all'])} | 今日消耗: {_format_num(today_tokens)}")
             self.cached_label.configure(text=f"缓存: {_format_num(stats['total_cached'])}")
             self.uncached_label.configure(text=f"未命中: {_format_num(stats['total_uncached'])}")
             self.hit_rate_label.configure(text=f"命中率: {stats['hit_rate']:.1f}%")
@@ -1128,11 +1131,25 @@ class DeepSeekFloatingWidget:
             self.progress_fill.configure(width=0)
 
     def _quit_app(self):
+        # 清除内存中的token
+        self._auth_token = None
+        self._balance = 0
+        self._monthly_usage = 0
+        
+        # 清除配置文件
         try:
             if os.path.exists(CONFIG_FILE):
                 os.remove(CONFIG_FILE)
         except Exception:
             pass
+        
+        # 清除监控数据
+        try:
+            self.monitor.set_records([])
+            self.monitor.set_extra_info({})
+        except Exception:
+            pass
+        
         try:
             self.root.destroy()
         except Exception:
